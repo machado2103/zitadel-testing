@@ -11,22 +11,15 @@
       </div>
 
       <div class="login-actions">
-        <!-- TODO: Integrate Zitadel authentication here -->
-        <!-- This button will trigger Zitadel OAuth flow -->
-        <button class="retro-button primary" @click="handleLogin">
+        <!-- Zitadel OAuth login button -->
+        <button class="retro-button primary" @click="handleLogin" :disabled="isLoading">
           <svg class="button-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1" />
           </svg>
-          <span>LOGIN</span>
+          <span>{{ isLoading ? 'REDIRECTING...' : 'LOGIN WITH ZITADEL' }}</span>
         </button>
 
-        <!-- Temporary bypass button for development -->
-        <button class="retro-button secondary" @click="handleBypass">
-          <svg class="button-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7l5 5m0 0l-5 5m5-5H6" />
-          </svg>
-          <span>DEV BYPASS</span>
-        </button>
+        <p v-if="error" class="error-message">{{ error }}</p>
       </div>
 
       <div class="login-footer">
@@ -40,26 +33,45 @@
 </template>
 
 <script setup>
+import { ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuth } from '../composables/useAuth'
 
 const router = useRouter()
-const { login } = useAuth()
+const { login, isAuthenticated } = useAuth()
 
-// TODO: Replace with actual Zitadel authentication
-// This function will initiate the Zitadel OAuth flow
-// Example: await zitadelClient.authorize()
+const isLoading = ref(false)
+const error = ref(null)
+
+/**
+ * Watch for authentication changes and redirect to main page
+ */
+watch(isAuthenticated, (authenticated) => {
+  console.log('Auth state changed:', authenticated)
+  console.log('User:', router.currentRoute.value)
+  if (authenticated) {
+    console.log('Redirecting to /main')
+    router.push('/main')
+  }
+}, { immediate: true })
+
+/**
+ * Handle Zitadel login
+ * This will redirect to Zitadel for authentication
+ */
 const handleLogin = async () => {
-  console.log('Login clicked - Zitadel integration pending')
-  // Placeholder for Zitadel login logic
-  login()
-  router.push({ name: 'Main' })
-}
+  try {
+    isLoading.value = true
+    error.value = null
 
-// Temporary bypass for development
-const handleBypass = () => {
-  login()
-  router.push({ name: 'Main' })
+    // Initiate Zitadel OAuth flow
+    // This will redirect to Zitadel login page
+    await login()
+  } catch (err) {
+    console.error('Login failed:', err)
+    error.value = 'Authentication failed. Please try again.'
+    isLoading.value = false
+  }
 }
 </script>
 
@@ -158,9 +170,23 @@ const handleBypass = () => {
   transform: translateY(-2px);
 }
 
+.retro-button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none !important;
+}
+
 .button-icon {
   width: 24px;
   height: 24px;
+}
+
+.error-message {
+  color: #ff6ec7;
+  font-size: 0.9rem;
+  margin-top: 15px;
+  text-align: center;
+  letter-spacing: 1px;
 }
 
 .login-footer {

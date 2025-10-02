@@ -72,9 +72,15 @@ const handleClick = async () => {
   console.log(`Click recorded: ${clickCount.value}`)
 }
 
-const handleLogout = () => {
-  logout()
-  router.push({ name: 'Login' })
+const handleLogout = async () => {
+  try {
+    await logout()
+    // Zitadel will handle the redirect to post logout URI
+  } catch (err) {
+    console.error('Logout failed:', err)
+    // Fallback: redirect to login anyway
+    router.push({ name: 'Login' })
+  }
 }
 </script>
 

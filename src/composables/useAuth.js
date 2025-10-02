@@ -1,60 +1,58 @@
-import { ref, computed } from 'vue'
-
-// TODO: Replace with Zitadel authentication state
-// This will be replaced with Zitadel's authentication provider
-// Example: import { useZitadel } from '@zitadel/vue'
-
-// Mock authentication state (will be replaced with Zitadel)
-const isLoggedIn = ref(false)
-const user = ref(null)
+import { computed, inject } from 'vue'
 
 export function useAuth() {
-  // TODO: Implement Zitadel login
-  // This will initiate the OAuth/OIDC flow with Zitadel
-  // Example implementation:
-  // const zitadelClient = useZitadel()
-  // const login = async () => {
-  //   await zitadelClient.authorize()
-  //   const userInfo = await zitadelClient.getUserInfo()
-  //   user.value = userInfo
-  //   isLoggedIn.value = true
-  // }
-  const login = () => {
-    isLoggedIn.value = true
-    user.value = {
-      id: 'mock-user-id',
-      email: 'user@example.com',
-      name: 'Mock User'
+  const auth = inject('$oidcAuth')
+
+  if (!auth) {
+    throw new Error('OIDC Auth not provided. Make sure you called app.use() with the auth instance.')
+  }
+
+  /**
+   * Initiate Zitadel OAuth login flow
+   */
+  const login = async () => {
+    try {
+      await auth.signIn()
+    } catch (error) {
+      console.error('Login error:', error)
+      throw error
     }
-    console.log('Mock login - Replace with Zitadel integration')
   }
 
-  // TODO: Implement Zitadel logout
-  // This will clear the session and redirect to Zitadel logout
-  // Example implementation:
-  // const logout = async () => {
-  //   await zitadelClient.logout()
-  //   user.value = null
-  //   isLoggedIn.value = false
-  // }
-  const logout = () => {
-    isLoggedIn.value = false
-    user.value = null
-    console.log('Mock logout - Replace with Zitadel integration')
+  /**
+   * Logout from Zitadel and clear session
+   */
+  const logout = async () => {
+    try {
+      await auth.signOut()
+    } catch (error) {
+      console.error('Logout error:', error)
+      throw error
+    }
   }
 
-  // TODO: Implement Zitadel token retrieval
-  // This will get the current access token for API calls
-  // Example implementation:
-  // const getToken = async () => {
-  //   return await zitadelClient.getAccessToken()
-  // }
+  /**
+   * Get current access token for API calls
+   */
   const getToken = () => {
-    return 'mock-token-12345'
+    return auth.accessToken
   }
 
-  const isAuthenticated = computed(() => isLoggedIn.value)
-  const currentUser = computed(() => user.value)
+  /**
+   * Check if user is authenticated
+   */
+  const isAuthenticated = computed(() => {
+    const result = auth.isAuthenticated
+    console.log('isAuthenticated computed:', result, 'auth object:', auth)
+    return result
+  })
+
+  /**
+   * Get current user information
+   */
+  const currentUser = computed(() => {
+    return auth.userProfile
+  })
 
   return {
     isAuthenticated,
