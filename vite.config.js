@@ -5,6 +5,6 @@ export default defineConfig({
   plugins: [vue()],
   server: {
     port: 5173,
-    strictPort: true // Falha se a porta já estiver em uso
+    strictPort: true // Fails if Port is in use
   }
 })
