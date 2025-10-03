@@ -31,6 +31,10 @@ dist-ssr
 .env.test.local
 .env.production.local
 
+# Zitadel API Keys (NEVER commit these!)
+zitadel-api-key.json
+*-api-key.json
+
 # Database files
 *.db
 *.sqlite

@@ -43,14 +43,8 @@ const { login, isAuthenticated } = useAuth()
 const isLoading = ref(false)
 const error = ref(null)
 
-/**
- * Watch for authentication changes and redirect to main page
- */
 watch(isAuthenticated, (authenticated) => {
-  console.log('Auth state changed:', authenticated)
-  console.log('User:', router.currentRoute.value)
   if (authenticated) {
-    console.log('Redirecting to /main')
     router.push('/main')
   }
 }, { immediate: true })

@@ -21,27 +21,47 @@
     <!-- Main content with click button -->
     <main class="main-content">
       <div class="click-section">
+        <!-- User info display -->
+        <div class="user-info">
+          <div class="user-info-row">
+            <span class="user-label">USER ID:</span>
+            <span class="user-value">{{ userId }}</span>
+          </div>
+          <div class="user-info-row">
+            <span class="user-label">NAME:</span>
+            <span class="user-value">{{ userName }}</span>
+          </div>
+        </div>
+
         <div class="counter-display">
           <span class="counter-label">CLICKS</span>
           <span class="counter-value">{{ clickCount }}</span>
         </div>
 
-        <!-- Main click button -->
-        <button class="click-button" @click="handleClick">
-          <div class="button-content">
-            <svg class="smile-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-              <circle cx="12" cy="12" r="10" stroke-width="2"/>
-              <circle cx="9" cy="9" r="1" fill="currentColor"/>
-              <circle cx="15" cy="9" r="1" fill="currentColor"/>
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 14s1.5 2 4 2 4-2 4-2"/>
+        <!-- Main click button and reset button -->
+        <div class="button-group">
+          <button class="click-button" @click="handleClick">
+            <div class="button-content">
+              <svg class="smile-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                <circle cx="12" cy="12" r="10" stroke-width="2"/>
+                <circle cx="9" cy="9" r="1" fill="currentColor"/>
+                <circle cx="15" cy="9" r="1" fill="currentColor"/>
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 14s1.5 2 4 2 4-2 4-2"/>
+              </svg>
+              <span class="button-text">CLICK ME</span>
+            </div>
+          </button>
+
+          <button class="reset-button" @click="handleReset" title="Reset clicks to 0">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
             </svg>
-            <span class="button-text">CLICK ME</span>
-          </div>
-        </button>
+            <span class="reset-text">RESET</span>
+          </button>
+        </div>
 
         <div class="info-text">
-          <!-- TODO: This will be connected to backend database -->
-          <span>Local counter only - Database integration pending</span>
+          <span>✅ Connected to backend - Clicks saved in database</span>
         </div>
       </div>
     </main>
@@ -49,36 +69,72 @@
 </template>
 
 <script setup>
-import { ref } from 'vue'
+import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuth } from '../composables/useAuth'
 import { useClickApi } from '../composables/useClickApi'
 
 const router = useRouter()
-const { logout } = useAuth()
-const { recordClick } = useClickApi()
+const { logout, currentUser } = useAuth()
+const { recordClick, getTotalClicks, deleteAllClicks } = useClickApi()
 
 const clickCount = ref(0)
+const userId = ref('')
+const userName = ref('')
 
-// TODO: Replace with actual API call to record click in database
-// This function will send click data to backend API endpoint
-// Example: await axios.post('/api/clicks', { timestamp: Date.now() })
+// Load initial click count when component mounts
+const loadClickCount = async () => {
+  try {
+    clickCount.value = await getTotalClicks()
+  } catch (err) {
+    console.error('Error loading click count:', err)
+  }
+}
+
+// Load user info and clicks when component is mounted
+onMounted(() => {
+  if (currentUser.value) {
+    userId.value = currentUser.value.sub || ''
+    userName.value = currentUser.value.name || currentUser.value.preferred_username || 'User'
+  }
+  loadClickCount()
+})
+
+// Record click in backend
 const handleClick = async () => {
-  clickCount.value++
+  try {
+    await recordClick()
+    // Update count after recording
+    clickCount.value = await getTotalClicks()
+  } catch (err) {
+    console.error('Error recording click:', err)
+  }
+}
 
-  // Placeholder for API call
-  await recordClick()
+const handleReset = async () => {
+  try {
+    // Delete all clicks from database
+    await deleteAllClicks()
 
-  console.log(`Click recorded: ${clickCount.value}`)
+    // Reset click count display
+    clickCount.value = 0
+  } catch (err) {
+    console.error('Reset failed:', err)
+  }
 }
 
 const handleLogout = async () => {
   try {
+    // Reset click count display (don't delete from database)
+    clickCount.value = 0
+
+    // Logout from Zitadel
     await logout()
     // Zitadel will handle the redirect to post logout URI
   } catch (err) {
     console.error('Logout failed:', err)
     // Fallback: redirect to login anyway
+    clickCount.value = 0
     router.push({ name: 'Login' })
   }
 }
@@ -166,6 +222,44 @@ const handleLogout = async () => {
   text-align: center;
 }
 
+.user-info {
+  background: rgba(26, 26, 46, 0.6);
+  border: 2px solid #00d4ff;
+  border-radius: 8px;
+  padding: 20px 30px;
+  margin-bottom: 30px;
+  backdrop-filter: blur(10px);
+  max-width: 600px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.user-info-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.user-info-row:last-child {
+  margin-bottom: 0;
+}
+
+.user-label {
+  font-size: 0.9rem;
+  letter-spacing: 2px;
+  color: #00d4ff;
+  font-weight: 600;
+}
+
+.user-value {
+  font-size: 0.95rem;
+  color: #ff6ec7;
+  font-weight: 500;
+  letter-spacing: 1px;
+  word-break: break-all;
+}
+
 .counter-display {
   display: flex;
   flex-direction: column;
@@ -188,6 +282,14 @@ const handleLogout = async () => {
   min-width: 150px;
 }
 
+.button-group {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 30px;
+  margin-bottom: 30px;
+}
+
 .click-button {
   width: 300px;
   height: 300px;
@@ -198,7 +300,6 @@ const handleLogout = async () => {
   transition: all 0.3s ease;
   box-shadow: 0 0 40px rgba(255, 110, 199, 0.4), 0 0 60px rgba(0, 212, 255, 0.3);
   backdrop-filter: blur(10px);
-  margin: 0 auto 30px;
 }
 
 .click-button:hover {
@@ -231,6 +332,48 @@ const handleLogout = async () => {
   letter-spacing: 3px;
   color: #ff6ec7;
   text-shadow: 0 0 10px rgba(255, 110, 199, 0.6);
+}
+
+.reset-button {
+  width: 120px;
+  height: 120px;
+  border: 3px solid #00d4ff;
+  border-radius: 4px;
+  background: rgba(0, 212, 255, 0.1);
+  cursor: pointer;
+  transition: all 0.3s ease;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  box-shadow: 0 0 20px rgba(0, 212, 255, 0.3);
+  backdrop-filter: blur(10px);
+}
+
+.reset-button:hover {
+  background: rgba(0, 212, 255, 0.2);
+  box-shadow: 0 0 30px rgba(0, 212, 255, 0.5);
+  transform: translateY(-2px);
+}
+
+.reset-button:active {
+  transform: translateY(0);
+}
+
+.reset-button svg {
+  width: 40px;
+  height: 40px;
+  color: #00d4ff;
+  filter: drop-shadow(0 0 8px rgba(0, 212, 255, 0.6));
+}
+
+.reset-text {
+  font-size: 0.9rem;
+  font-weight: 700;
+  letter-spacing: 2px;
+  color: #00d4ff;
+  text-shadow: 0 0 8px rgba(0, 212, 255, 0.6);
 }
 
 .info-text {

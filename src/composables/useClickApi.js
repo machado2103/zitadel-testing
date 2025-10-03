@@ -1,111 +1,207 @@
 import { ref } from 'vue'
-// import { useAuth } from './useAuth'
+import { useAuth } from './useAuth'
+import axios from 'axios'
 
-// TODO: Import axios or fetch for API calls
-// import axios from 'axios'
+// API base URL from environment variable (defaults to localhost:3001)
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001'
 
+/**
+ * Click API Composable
+ *
+ * Provides methods for interacting with the click tracking API.
+ * All requests are automatically authenticated using JWT tokens from Zitadel.
+ *
+ * Usage in components:
+ * import { useClickApi } from '@/composables/useClickApi'
+ * const { recordClick, getTotalClicks, loading, error } = useClickApi()
+ *
+ * @returns {object} API methods and reactive state
+ */
 export function useClickApi() {
-  // const { getToken } = useAuth()
+  const { getToken } = useAuth()
   const loading = ref(false)
   const error = ref(null)
 
-  // TODO: Replace with actual API endpoint
-  // This function will send click data to your backend
-  // Example implementation:
-  // const recordClick = async () => {
-  //   loading.value = true
-  //   error.value = null
-  //
-  //   try {
-  //     const token = getToken()
-  //     const response = await axios.post(
-  //       'http://your-backend-url/api/clicks',
-  //       {
-  //         timestamp: new Date().toISOString(),
-  //         userId: currentUser.id
-  //       },
-  //       {
-  //         headers: {
-  //           'Authorization': `Bearer ${token}`
-  //         }
-  //       }
-  //     )
-  //     return response.data
-  //   } catch (err) {
-  //     error.value = err.message
-  //     console.error('Failed to record click:', err)
-  //     throw err
-  //   } finally {
-  //     loading.value = false
-  //   }
-  // }
+  /**
+   * Record a new click
+   *
+   * Sends a POST request to the backend to record a click event.
+   * The backend will automatically associate the click with the authenticated user.
+   *
+   * @returns {Promise<object>} Click record with ID and timestamp
+   * @throws {Error} If the request fails
+   */
   const recordClick = async () => {
     loading.value = true
     error.value = null
 
-    // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 100))
+    try {
+      const token = getToken()
 
-    console.log('Click recorded at:', new Date().toISOString())
-    console.log('TODO: Send to backend API endpoint')
+      const response = await axios.post(
+        `${API_BASE_URL}/api/clicks`,
+        {},
+        {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        }
+      )
 
-    loading.value = false
+      return response.data
+    } catch (err) {
+      error.value = err.response?.data?.message || err.message
+      console.error('Error recording click:', err)
+      throw err
+    } finally {
+      loading.value = false
+    }
   }
 
-  // TODO: Implement function to fetch click history
-  // This will retrieve all clicks from the database
-  // Example implementation:
-  // const getClickHistory = async () => {
-  //   loading.value = true
-  //   error.value = null
-  //
-  //   try {
-  //     const token = getToken()
-  //     const response = await axios.get(
-  //       'http://your-backend-url/api/clicks',
-  //       {
-  //         headers: {
-  //           'Authorization': `Bearer ${token}`
-  //         }
-  //       }
-  //     )
-  //     return response.data
-  //   } catch (err) {
-  //     error.value = err.message
-  //     console.error('Failed to fetch click history:', err)
-  //     throw err
-  //   } finally {
-  //     loading.value = false
-  //   }
-  // }
-  const getClickHistory = async () => {
+  /**
+   * Get click history
+   *
+   * Retrieves the user's click history from the backend.
+   *
+   * @param {number} limit - Maximum number of results to return (default: 100)
+   * @returns {Promise<array>} Array of click records with timestamps
+   * @throws {Error} If the request fails
+   */
+  const getClickHistory = async (limit = 100) => {
     loading.value = true
     error.value = null
 
-    // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 200))
+    try {
+      const token = getToken()
 
-    console.log('TODO: Fetch click history from backend API')
+      const response = await axios.get(
+        `${API_BASE_URL}/api/clicks/history?limit=${limit}`,
+        {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        }
+      )
 
-    loading.value = false
-    return []
+      return response.data.data.clicks
+    } catch (err) {
+      error.value = err.response?.data?.message || err.message
+      console.error('Error getting history:', err)
+      throw err
+    } finally {
+      loading.value = false
+    }
   }
 
-  // TODO: Implement function to get total click count
-  // Example implementation:
-  // const getTotalClicks = async () => {
-  //   const response = await axios.get('http://your-backend-url/api/clicks/count')
-  //   return response.data.count
-  // }
+  /**
+   * Get total click count
+   *
+   * Retrieves the total number of clicks for the authenticated user.
+   *
+   * @returns {Promise<number>} Total click count
+   */
   const getTotalClicks = async () => {
-    console.log('TODO: Get total click count from backend API')
-    return 0
+    loading.value = true
+    error.value = null
+
+    try {
+      const token = getToken()
+
+      const response = await axios.get(
+        `${API_BASE_URL}/api/clicks/count`,
+        {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        }
+      )
+
+      return response.data.data.totalClicks
+    } catch (err) {
+      error.value = err.response?.data?.message || err.message
+      console.error('Error getting count:', err)
+      return 0
+    } finally {
+      loading.value = false
+    }
+  }
+
+  /**
+   * Get global statistics
+   *
+   * Retrieves aggregate statistics across all users.
+   * Useful for admin dashboards.
+   *
+   * @returns {Promise<object>} Statistics object
+   * @throws {Error} If the request fails
+   */
+  const getGlobalStats = async () => {
+    loading.value = true
+    error.value = null
+
+    try {
+      const token = getToken()
+
+      const response = await axios.get(
+        `${API_BASE_URL}/api/clicks/stats`,
+        {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        }
+      )
+
+      return response.data.data
+    } catch (err) {
+      error.value = err.response?.data?.message || err.message
+      console.error('Error getting statistics:', err)
+      throw err
+    } finally {
+      loading.value = false
+    }
+  }
+
+  /**
+   * Delete all user clicks
+   *
+   * Removes all click records for the authenticated user.
+   * Typically called when the user wants to reset their data.
+   *
+   * @returns {Promise<object>} Response with number of deleted clicks
+   * @throws {Error} If the request fails
+   */
+  const deleteAllClicks = async () => {
+    loading.value = true
+    error.value = null
+
+    try {
+      const token = getToken()
+
+      const response = await axios.delete(
+        `${API_BASE_URL}/api/clicks/logout`,
+        {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        }
+      )
+
+      return response.data
+    } catch (err) {
+      error.value = err.response?.data?.message || err.message
+      console.error('Error deleting clicks:', err)
+      throw err
+    } finally {
+      loading.value = false
+    }
   }
 
   return {
     recordClick,
     getClickHistory,
     getTotalClicks,
+    getGlobalStats,
+    deleteAllClicks,
     loading,
     error
   }
